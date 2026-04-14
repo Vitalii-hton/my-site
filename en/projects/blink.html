@@ -1062,6 +1062,7 @@ audioTrigger.addEventListener('click', function() {
 </div>
 </div>
 </div>
+</div>
 <div class='div custom-prev' id='ivedvwf25_0'>
 <div class='image project-cursor-prev' id='ikmmdmniw_0'>
 <img src='../../thumb/2/DLxw-r4RTlBvHmoaSgm2VA/640r480/d/prev.svg' alt='prev' title='' data-size='0x0' data-origin-src='thumb/2/DLxw-r4RTlBvHmoaSgm2VA/640r480/d/prev.svg' class='image__img' id='i4ajcucop_0' >
@@ -1071,7 +1072,6 @@ audioTrigger.addEventListener('click', function() {
 </div>
 </div>
 <div class='div custom-next' id='i04oiuz7x_0'></div>
-</div>
 <div class='text project-page-cont__text body' id='izly4xtnt_0'>
 <span class='text-block-wrap-div'>[scroll]</span>
 </div>
@@ -2278,6 +2278,24 @@ document.addEventListener("DOMContentLoaded", () => {
   .custom-next,
   .custom-prev {
     cursor: none;
+  }
+
+  /* Fix: swiper container must maintain full height so project-page-cont
+     doesn't collapse when videos are loading (height:auto caused the gap) */
+  [swiper-project] {
+    height: 100%;
+  }
+  [swiper-project] .swiper-wrapper {
+    height: 100%;
+  }
+  [swiper-project] .swiper-slide {
+    height: 100%;
+  }
+  [swiper-project] .swiper-slide video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
   .project-cursor-prev, .project-cursor-next {
