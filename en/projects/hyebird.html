@@ -1010,41 +1010,32 @@ audioTrigger.addEventListener('click', function() {
 </header>
 <main class='div main-wrapper' id='ilztbd4ik_0'>
 
-<!-- ===== INFINITE SCROLL CAROUSEL ===== -->
 <style>
-  /* 1. ИСПРАВЛЕНИЕ ДЛЯ КОНСТРУКТОРОВ: Разрешаем sticky работать */
-  .mosaic-wrap, .root, .page-wrapper, .main-wrapper {
-    overflow: visible !important;
-    clip-path: none !important;
-  }
-  
-  body, html {
-    overflow-x: hidden !important; /* Убираем нижний ползунок всей страницы */
+  /* 1. ЖЁСТКО БЛОКИРУЕМ ВЕРТИКАЛЬНЫЙ СКРОЛЛ */
+  html, body, .page-wrapper, .main-wrapper {
+    overflow: hidden !important; 
+    height: 100vh !important;
+    width: 100vw !important;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: none; /* Убирает эффект "резинки" на Mac/iOS */
+    touch-action: none !important; /* Блокирует системный скролл на телефонах */
   }
 
-  /* 2. Стили самой карусели */
+  /* 2. Сцена на весь экран */
   .carousel-scene {
     position: relative;
     width: 100%;
-    height: 400vh; /* Высота скролла (чем больше, тем дольше крутить) */
-    background: #fff;
-  }
-  
-  .carousel-sticky {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    width: 100%;
-    overflow: hidden;
+    height: 100vh; /* Высота ровно в один экран */
     display: flex;
     align-items: center;
+    background: #fff;
   }
   
   .carousel-track {
     display: flex;
     align-items: flex-start;
     will-change: transform;
-    /* Убираем прыжки на слабых устройствах */
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
@@ -1070,8 +1061,7 @@ audioTrigger.addEventListener('click', function() {
 </style>
 
 <div class="carousel-scene" id="carouselScene">
-  <div class="carousel-sticky" id="carouselSticky">
-    <div class="carousel-track" id="carouselTrack">
+  <div class="carousel-track" id="carouselTrack">
 
       <div class="c-item" style="margin-top:8vh"><img src="../../optimized_output/photo_2026-04-12 23.14.15.webp" alt="" loading="lazy"></div>
       <div class="c-item" style="margin-top:22vh"><video src="../../optimized_output/sun.mp4" autoplay muted loop playsinline></video></div>
@@ -1105,19 +1095,20 @@ audioTrigger.addEventListener('click', function() {
       <div class="c-item c-clone" style="margin-top:30vh"><video src="../../optimized_output/SaveClip.App_AQMJRTbFlXcq-OIxoQhXhzFG2LzNBEb5APw8njRzP0wTBt_hIaXe21proZZJ4Yi5B_oQSKRNUOqSXVstCh2MpmRhAmTA6nfjTtOrNa0.mp4" autoplay muted loop playsinline></video></div>
       <div class="c-item c-clone" style="margin-top:9vh"><video src="../../optimized_output/SaveClip.App_AQNHCFloTOBj4KfpO2sSS4Yiky0E-q6WBpCatpij99qNbJXumTDhuW0mXem2N8LFaVFO3dbsMGNm2as-EJXsofbjkcFuwdlCdPxeOWs.mp4" autoplay muted loop playsinline></video></div>
 
-    </div>
   </div>
 </div>
 
 <script>
 (function () {
-  var scene  = document.getElementById('carouselScene');
-  var track  = document.getElementById('carouselTrack');
+  var track = document.getElementById('carouselTrack');
+  if (!track) return;
+
   var setWidth = 0;
   var currentX = 0;
+  var targetX = 0;
 
+  // Рассчитываем ширину одного сета оригинальных картинок
   function measure() {
-    // Измеряем ширину только оригинальных элементов
     var items = track.querySelectorAll('.c-item:not(.c-clone)');
     var w = 0;
     items.forEach(function(el) {
@@ -1128,29 +1119,56 @@ audioTrigger.addEventListener('click', function() {
     setWidth = w;
   }
 
-  function update() {
-    var rect = scene.getBoundingClientRect();
-    var sTop = rect.top;
-    var targetX = 0;
-
-    // Если секция дошла до верха окна, начинаем считать прогресс
-    if (sTop <= 0) {
-      var scrolled = Math.abs(sTop);
-      var travelH = rect.height - window.innerHeight; 
-      
-      // Вычисляем процент прокрутки (от 0 до 1)
-      var progress = Math.max(0, Math.min(1, scrolled / travelH));
-      
-      // Целевая позиция: прокручиваем ровно на ширину одного сета
-      targetX = progress * setWidth;
+  // 1. ПЕРЕХВАТ КОЛЕСИКА МЫШИ (Десктоп)
+  window.addEventListener('wheel', function(e) {
+    // В MacOS может быть горизонтальный скролл (deltaX), а у обычных мышек вертикальный (deltaY)
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      targetX += e.deltaX;
+    } else {
+      targetX += e.deltaY;
     }
+  }, { passive: false });
 
-    // Плавное приближение к цели (lerp)
-    // 0.08 - коэффициент плавности. Меньше = более плавно.
+  // 2. ПЕРЕХВАТ СВАЙПОВ (Телефоны/Планшеты)
+  var touchStartX = 0;
+  var touchStartY = 0;
+  
+  window.addEventListener('touchstart', function(e) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: false });
+
+  window.addEventListener('touchmove', function(e) {
+    var x = e.touches[0].clientX;
+    var y = e.touches[0].clientY;
+    var diffX = touchStartX - x;
+    var diffY = touchStartY - y;
+    
+    // Смотрим, куда пользователь сильнее свайпнул (по горизонтали или вертикали) 
+    // и конвертируем это в движение ленты. Умножаем на 1.5 для отзывчивости
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      targetX += diffX * 1.5;
+    } else {
+      targetX += diffY * 1.5;
+    }
+    
+    touchStartX = x;
+    touchStartY = y;
+  }, { passive: false });
+
+  // 3. АНИМАЦИЯ И БЕСКОНЕЧНАЯ ЗАКОЛЬЦОВКА
+  function update() {
+    // Плавно догоняем целевую точку (Lerp)
     currentX += (targetX - currentX) * 0.08;
 
-    // Сдвигаем трек с использованием 3D для аппаратного ускорения
-    track.style.transform = 'translate3d(-' + currentX + 'px, 0, 0)';
+    // Математическая магия для бесконечного лупа в обе стороны
+    var wrapX = currentX % setWidth;
+    if (wrapX < 0) {
+        wrapX += setWidth;
+    }
+
+    // Двигаем трек с помощью 3D-трансформации (чтобы не тормозило)
+    track.style.transform = 'translate3d(-' + wrapX + 'px, 0, 0)';
     
     requestAnimationFrame(update);
   }
