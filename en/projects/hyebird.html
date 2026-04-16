@@ -1012,12 +1012,24 @@ audioTrigger.addEventListener('click', function() {
 
 <!-- ===== INFINITE SCROLL CAROUSEL ===== -->
 <style>
+  /* 1. ИСПРАВЛЕНИЕ ДЛЯ КОНСТРУКТОРОВ: Разрешаем sticky работать */
+  .mosaic-wrap, .root, .page-wrapper, .main-wrapper {
+    overflow: visible !important;
+    clip-path: none !important;
+  }
+  
+  body, html {
+    overflow-x: hidden !important; /* Убираем нижний ползунок всей страницы */
+  }
+
+  /* 2. Стили самой карусели */
   .carousel-scene {
     position: relative;
     width: 100%;
-    height: 500vh;
+    height: 400vh; /* Высота скролла (чем больше, тем дольше крутить) */
     background: #fff;
   }
+  
   .carousel-sticky {
     position: sticky;
     top: 0;
@@ -1027,17 +1039,23 @@ audioTrigger.addEventListener('click', function() {
     display: flex;
     align-items: center;
   }
+  
   .carousel-track {
     display: flex;
     align-items: flex-start;
     will-change: transform;
+    /* Убираем прыжки на слабых устройствах */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
+  
   .c-item {
     flex-shrink: 0;
     position: relative;
     width: clamp(240px, 28vw, 480px);
     margin-right: clamp(20px, 2.5vw, 50px);
   }
+  
   .c-item img,
   .c-item video {
     display: block;
@@ -1055,7 +1073,6 @@ audioTrigger.addEventListener('click', function() {
   <div class="carousel-sticky" id="carouselSticky">
     <div class="carousel-track" id="carouselTrack">
 
-      <!-- ORIGINAL SET -->
       <div class="c-item" style="margin-top:8vh"><img src="../../optimized_output/photo_2026-04-12 23.14.15.webp" alt="" loading="lazy"></div>
       <div class="c-item" style="margin-top:22vh"><video src="../../optimized_output/sun.mp4" autoplay muted loop playsinline></video></div>
       <div class="c-item" style="margin-top:5vh"><img src="../../optimized_output/O_05_F.webp" alt="" loading="lazy"></div>
@@ -1072,7 +1089,6 @@ audioTrigger.addEventListener('click', function() {
       <div class="c-item" style="margin-top:30vh"><video src="../../optimized_output/SaveClip.App_AQMJRTbFlXcq-OIxoQhXhzFG2LzNBEb5APw8njRzP0wTBt_hIaXe21proZZJ4Yi5B_oQSKRNUOqSXVstCh2MpmRhAmTA6nfjTtOrNa0.mp4" autoplay muted loop playsinline></video></div>
       <div class="c-item" style="margin-top:9vh"><video src="../../optimized_output/SaveClip.App_AQNHCFloTOBj4KfpO2sSS4Yiky0E-q6WBpCatpij99qNbJXumTDhuW0mXem2N8LFaVFO3dbsMGNm2as-EJXsofbjkcFuwdlCdPxeOWs.mp4" autoplay muted loop playsinline></video></div>
 
-      <!-- CLONE SET (seamless loop) -->
       <div class="c-item c-clone" style="margin-top:8vh"><img src="../../optimized_output/photo_2026-04-12 23.14.15.webp" alt="" loading="lazy"></div>
       <div class="c-item c-clone" style="margin-top:22vh"><video src="../../optimized_output/sun.mp4" autoplay muted loop playsinline></video></div>
       <div class="c-item c-clone" style="margin-top:5vh"><img src="../../optimized_output/O_05_F.webp" alt="" loading="lazy"></div>
@@ -1099,9 +1115,9 @@ audioTrigger.addEventListener('click', function() {
   var track  = document.getElementById('carouselTrack');
   var setWidth = 0;
   var currentX = 0;
-  var targetX  = 0;
 
   function measure() {
+    // Измеряем ширину только оригинальных элементов
     var items = track.querySelectorAll('.c-item:not(.c-clone)');
     var w = 0;
     items.forEach(function(el) {
@@ -1113,23 +1129,29 @@ audioTrigger.addEventListener('click', function() {
   }
 
   function update() {
-    var sTop   = scene.getBoundingClientRect().top;
-    var scrolled = -sTop;
-    var travelH  = scene.offsetHeight - window.innerHeight;
-    var progress = Math.max(0, Math.min(1, scrolled / travelH));
+    var rect = scene.getBoundingClientRect();
+    var sTop = rect.top;
+    var targetX = 0;
 
-    targetX = (progress * setWidth) % setWidth;
+    // Если секция дошла до верха окна, начинаем считать прогресс
+    if (sTop <= 0) {
+      var scrolled = Math.abs(sTop);
+      var travelH = rect.height - window.innerHeight; 
+      
+      // Вычисляем процент прокрутки (от 0 до 1)
+      var progress = Math.max(0, Math.min(1, scrolled / travelH));
+      
+      // Целевая позиция: прокручиваем ровно на ширину одного сета
+      targetX = progress * setWidth;
+    }
 
-    // smooth lerp
-    var diff = targetX - currentX;
-    // handle wrap-around
-    if (diff > setWidth / 2)  diff -= setWidth;
-    if (diff < -setWidth / 2) diff += setWidth;
-    currentX += diff * 0.07;
-    if (currentX < 0) currentX += setWidth;
-    if (currentX >= setWidth) currentX -= setWidth;
+    // Плавное приближение к цели (lerp)
+    // 0.08 - коэффициент плавности. Меньше = более плавно.
+    currentX += (targetX - currentX) * 0.08;
 
-    track.style.transform = 'translateX(-' + currentX + 'px)';
+    // Сдвигаем трек с использованием 3D для аппаратного ускорения
+    track.style.transform = 'translate3d(-' + currentX + 'px, 0, 0)';
+    
     requestAnimationFrame(update);
   }
 
