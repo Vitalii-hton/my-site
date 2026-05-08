@@ -1829,6 +1829,19 @@
                     });
                   });
                 });
+
+                // =======================
+                // Фикс bfcache: сброс шторки при навигации "назад"
+                // =======================
+                window.addEventListener('pageshow', function(event) {
+                  if (event.persisted) {
+                    const curtain = document.querySelector('.preload-close');
+                    if (curtain) {
+                      curtain.classList.remove('active');
+                      curtain.classList.add('open');
+                    }
+                  }
+                });
               </script>
             </div>
           </div>
