@@ -2429,6 +2429,44 @@
     $ite.start({ "sid": 8530695, "vid": 8614711, "aid": 5632004, "stid": 27, "cp": 21, "active": true, "domain": "liteshop.design", "lang": "ru", "trusted": false, "debug": false, "captcha": 4, "onetap": [{ "provider": "vkontakte", "provider_id": "54434793", "code_verifier": "cCetL5vruexz-Ehz7sNqI0TCw3dJmBkPT5SVeTTKf6r-SsZuBY_o6RSOYm61NHIlFPhXk_yfhSBGnx4uf32mNCLMD1a9" }] });
     /*]]>*/</script>
   <!-- /assets.bottom -->
+
+  <!-- Safari autoplay fix для hero-video -->
+  <script>
+    (function() {
+      function safariVideoFix() {
+        var heroVideo = document.querySelector('.hero-video');
+        if (!heroVideo) return;
+
+        // Safari требует явного выставления этих свойств через JS,
+        // HTML-атрибутов ему недостаточно для автоплея через скрипты
+        heroVideo.muted = true;
+        heroVideo.defaultMuted = true;
+        heroVideo.setAttribute('playsinline', '');
+        heroVideo.setAttribute('muted', '');
+
+        var playPromise = heroVideo.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(function() {
+            // Если Safari заблокировал (напр. режим энергосбережения) —
+            // пробуем запустить снова при первом касании/клике
+            var unlock = function() {
+              heroVideo.play();
+              document.removeEventListener('touchstart', unlock);
+              document.removeEventListener('click', unlock);
+            };
+            document.addEventListener('touchstart', unlock, { once: true });
+            document.addEventListener('click', unlock, { once: true });
+          });
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', safariVideoFix);
+      } else {
+        safariVideoFix();
+      }
+    })();
+  </script>
 </body>
 
 </html>
